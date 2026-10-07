@@ -43,7 +43,9 @@ def _progress_hook(task_id: str, store: TaskStore):
     def hook(d: dict) -> None:
         status = d.get("status")
         if status == "downloading":
-            total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
+            # total_bytes_estimate is fractional for fragmented streams (e.g.
+            # HLS); byte counts in the API contract are integers.
+            total = int(d.get("total_bytes") or d.get("total_bytes_estimate") or 0)
             downloaded = d.get("downloaded_bytes", 0)
             store.update(
                 task_id,

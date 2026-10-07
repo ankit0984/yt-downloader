@@ -56,6 +56,20 @@ class _BoomYDL(_FakeYDL):
         raise RuntimeError("boom")
 
 
+class _FloatEstimateYDL(_FakeYDL):
+    """Reports a fractional total_bytes_estimate, like HLS downloads do."""
+
+    def extract_info(self, url, download):
+        hook = self.opts["progress_hooks"][0]
+        hook({"status": "downloading", "downloaded_bytes": 5,
+              "total_bytes_estimate": 10.5, "speed": 1.0, "eta": 0.5,
+              "filename": "x.mp4"})
+        path = Path(self.opts["outtmpl"].replace("%(title)s", "video").replace("%(ext)s", "mp4"))
+        path.write_bytes(b"data")
+        hook({"status": "finished"})
+        return {"requested_downloads": [{"filepath": str(path)}]}
+
+
 class _FlakyYDL(_FakeYDL):
     calls = 0
 
@@ -105,6 +119,22 @@ def test_run_download_errors_after_retries_exhausted(tmp_path, monkeypatch):
     record = store.get("t1")
     assert record["status"] == "error"
     assert "boom" in record["error"]
+
+
+def test_run_download_coerces_float_total_estimate_to_int(tmp_path, monkeypatch):
+    # yt-dlp reports fractional total_bytes_estimate for fragmented streams
+    # (e.g. HLS); record.total_bytes must stay an int (Task 6 E2E finding).
+    monkeypatch.setattr(dr.settings, "DOWNLOAD_DIR", str(tmp_path))
+    monkeypatch.setattr(dr.yt_dlp, "YoutubeDL", _FloatEstimateYDL)
+    store = TaskStore()
+    store.create("t1")
+
+    dr.run_download("https://example.com/v", "530", "t1", False, store)
+
+    record = store.get("t1")
+    assert record["status"] == "done"
+    assert record["total_bytes"] == 10
+    assert isinstance(record["total_bytes"], int)
 
 
 def test_cleanup_old_files_removes_only_stale(tmp_path):
