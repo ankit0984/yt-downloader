@@ -19,7 +19,10 @@ Flutter ──HTTPS──> Worker (front door) ──> Container
                                             └─ temp dir: file is deleted after the client fetches it
 ```
 
-## Endpoints (all require the `X-API-Key` header)
+## Endpoints
+
+`/ping` and `/health` are unauthenticated probes (Cloudflare's readiness check
+covers `/ping`); every other endpoint requires the `X-API-Key` header.
 
 | Method | Path                       | Purpose                                                 |
 | ------ | -------------------------- | ------------------------------------------------------- |
