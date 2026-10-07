@@ -1,0 +1,13 @@
+# Single-service stack: API + download engine in one container.
+# This is the same image Cloudflare Containers builds from ./Dockerfile.
+services:
+  api:
+    build: .
+    environment:
+      DOWNLOAD_DIR: /tmp/ytdl
+      API_KEYS: '["change-me-in-production"]'
+      CORS_ORIGINS: '["http://localhost:3000"]'
+      YTDLP_PLAYER_CLIENTS: tv_embedded
+    ports:
+      - "8000:8000"
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
