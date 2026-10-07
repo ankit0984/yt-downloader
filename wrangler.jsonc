@@ -1,0 +1,32 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "youtube-downloader",
+	"main": "cloudflare/index.js",
+	"compatibility_date": "2026-10-07",
+
+	"containers": [
+		{
+			"class_name": "DownloaderContainer",
+			"image": "./Dockerfile",
+			// Single instance on purpose: the in-memory task registry requires every
+			// request for a task to hit the same container.
+			"max_instances": 1,
+			// 1/2 vCPU, 4 GiB RAM, 8 GB disk — fits yt-dlp + ffmpeg merges.
+			// Bump to "standard-2" if you see CPU-throttled merges.
+			"instance_type": "standard-1"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{ "name": "MY_CONTAINER", "class_name": "DownloaderContainer" }
+		]
+	},
+	"exports": {
+		"DownloaderContainer": { "type": "durable-object", "storage": "sqlite" }
+	},
+	"vars": {
+		"DOWNLOAD_DIR": "/tmp/ytdl",
+		"YTDLP_PLAYER_CLIENTS": "tv_embedded",
+		"RATE_LIMIT": "20/minute"
+	}
+}
