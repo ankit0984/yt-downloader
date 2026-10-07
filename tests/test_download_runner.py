@@ -124,3 +124,20 @@ def test_cleanup_old_files_removes_only_stale(tmp_path):
 
 def test_cleanup_old_files_missing_dir_is_noop(tmp_path):
     assert dr.cleanup_old_files(str(tmp_path / "nope"), max_age_hours=24) == 0
+
+
+def test_run_download_records_error_when_download_dir_uncreatable(tmp_path, monkeypatch):
+    # A file sits where the download directory would need to be created,
+    # so os.makedirs must fail with an OSError ("never raises" contract).
+    blocker = tmp_path / "blocker"
+    blocker.write_bytes(b"x")
+    monkeypatch.setattr(dr.settings, "DOWNLOAD_DIR", str(blocker / "sub"))
+    monkeypatch.setattr(dr.yt_dlp, "YoutubeDL", _FakeYDL)
+    store = TaskStore()
+    store.create("t1")
+
+    dr.run_download("https://example.com/v", "137", "t1", False, store)
+
+    record = store.get("t1")
+    assert record["status"] == "error"
+    assert record.get("extra") is None  # never reached a download attempt

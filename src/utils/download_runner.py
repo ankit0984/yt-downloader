@@ -83,7 +83,11 @@ def run_download(
 
     Never raises: failures are recorded in the store as `error`.
     """
-    os.makedirs(settings.DOWNLOAD_DIR, exist_ok=True)
+    try:
+        os.makedirs(settings.DOWNLOAD_DIR, exist_ok=True)
+    except OSError as exc:
+        store.update(task_id, status="error", error=str(exc))
+        return
     store.update(task_id, status="started")
 
     for attempt in range(1, MAX_RETRIES + 2):
