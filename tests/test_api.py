@@ -89,6 +89,18 @@ def test_status_unknown_task(client):
     assert r.json() == {"task_id": "does-not-exist", "status": "unknown"}
 
 
+def test_status_accepts_fractional_eta(client):
+    # yt-dlp reports fractional seconds for fragmented streams (e.g. HLS);
+    # /status must not 500 on them (caught by Task 6 E2E verification).
+    store = client.app.state.store
+    store.create("t-eta")
+    store.update("t-eta", status="downloading", percent=1.0, eta=0.57)
+
+    r = client.get("/status/t-eta", headers=_headers())
+    assert r.status_code == 200
+    assert r.json()["eta"] == 0.57
+
+
 def test_download_rejects_non_http_url(client):
     r = client.post("/download", json={"url": "not-a-url"}, headers=_headers())
     assert r.status_code == 422

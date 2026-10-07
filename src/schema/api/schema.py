@@ -48,7 +48,9 @@ class TaskStatusResponse(BaseModel):
     downloaded_bytes: Optional[int] = None
     total_bytes: Optional[int] = None
     speed: Optional[float] = None
-    eta: Optional[int] = None
+    # yt-dlp reports ETA in seconds and may be fractional for fragmented
+    # streams (e.g. HLS), so this must accept floats, not just ints.
+    eta: Optional[float] = None
     filename: Optional[str] = None
     error: Optional[str] = None
     # Any extra fields the worker publishes are preserved.
